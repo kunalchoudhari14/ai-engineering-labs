@@ -42,15 +42,24 @@ def run(llm: ChatOpenAI, template: PromptTemplate, question: str) -> str:
 
 def final_answer(reply: str) -> str:
     """Return the text after 'Final answer:' on the reply's last line."""
-    return reply.strip().splitlines()[-1].split("Final answer:")[-1].strip()
+    last_line = reply.strip().splitlines()[-1]
+    number = last_line.replace("Final answer:", "")
+    return number.strip()
 
 
 def self_consistency(question: str) -> str:
     """Ask the CoT question RUNS times at temperature > 0 and return the majority answer."""
-    llm = ChatOpenAI(model=MODEL, temperature=1.0)
-    answers = [final_answer(run(llm, VOTE, question)) for _ in range(RUNS)]
+    llm = ChatOpenAI(model=MODEL, temperature=1.0)  # > 0 so each run can reason differently
+
+    answers = []
+    for _ in range(RUNS):
+        reply = run(llm, VOTE, question)
+        answers.append(final_answer(reply))
     print("All answers:", answers)
-    return Counter(answers).most_common(1)[0][0]
+
+    winner, votes = Counter(answers).most_common(1)[0]  # top answer and its count
+    print(f"Votes for winner: {votes}/{RUNS}")
+    return winner
 
 
 def main() -> None:
